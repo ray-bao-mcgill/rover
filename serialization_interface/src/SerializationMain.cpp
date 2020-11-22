@@ -1,11 +1,14 @@
 #include <ros/ros.h>
 #include "ArmMotorCommand.h"
+#include "WheelSpeed.h"
 #include <unordered_set>
 #include "ProcessedControllerInput.h"
 #include <vector>
+#include <unordered_map>
 #include <std_msgs/UInt8MultiArray.h>
 
 using namespace ArmControl;
+using namespace DriveControl;
 
 ros::NodeHandle* handle;
 ros::Publisher ros_to_unity_pub;
@@ -39,11 +42,21 @@ void handle_unity_incoming_msg(const std::string& topic, const uint8_t* ptr)
     throw std::runtime_error("Not implemented");
 }
 
+std::unordered_set<std::string> publishing_topics;
+std::unordered_map<std::string, ros::Publisher> unity_publishers;
+
+// TODO : do not call destructors on every publish
 template<typename T>
 void handle_unity_incoming_simple_unmanaged_msg(const std::string& topic, const T* msg)
 {
-    ros::Publisher topicPub = handle->advertise<T>(topic.c_str(), 10);
-    topicPub.publish<T>(*msg);
+    if (publishing_topics.find(topic) == publishing_topics.end())
+    {
+        // new
+        publishing_topics.insert(topic);
+        unity_publishers[topic] = handle->advertise<T>(topic.c_str(), 1000);
+    }
+    //ROS_INFO("Published");
+    unity_publishers[topic].publish<T>(*msg);
 }
 
 template<>
@@ -67,9 +80,15 @@ void handle_unity_incoming_msg<ProcessedControllerInput>(const std::string& topi
     handle_unity_incoming_simple_unmanaged_msg(topic, (const ProcessedControllerInput*)ptr);
 }
 
+template<>
+void handle_unity_incoming_msg<WheelSpeed>(const std::string& topic, const uint8_t* ptr)
+{
+    handle_unity_incoming_simple_unmanaged_msg(topic, (const WheelSpeed*)ptr);
+}
+
 
 std::unordered_set<std::string> subscribed_topics;
-std::unordered_set<ros::Subscriber*> unity_subscribers;
+std::vector<ros::Subscriber> unity_subscribers;
 
 template<typename T>
 void unmanaged_send_to_unity(const T& msg, MessageTypeCode typeCode, const std::string& topic)
@@ -99,6 +118,13 @@ void unmanaged_send_to_unity(const T& msg, MessageTypeCode typeCode, const std::
         unmanaged_send_to_unity(msg, typeCode, topic); \
     }
 
+// ros::Subscriber subtest;
+
+//             void handle_msg_test(WheelSpeed ws)
+//             {
+//                 ROS_INFO("Callback!!");
+//             }
+// subscribing
 template<>
 void handle_unity_incoming_msg<void>(const std::string& topic, const uint8_t* ptr)
 {
@@ -108,7 +134,6 @@ void handle_unity_incoming_msg<void>(const std::string& topic, const uint8_t* pt
         return;
     }
     subscribed_topics.insert(topic);
-    ros::Subscriber msgSubscriber;
     
     switch (*ptr)
     {
@@ -118,9 +143,10 @@ void handle_unity_incoming_msg<void>(const std::string& topic, const uint8_t* pt
     { \
         boost::function<void (const T&)> func = [topicCaptured = topic](const T& msg) \
         { \
+            ROS_INFO("callback for unity subscription called"); \
             UNMANAGED_SEND_TO_UNITY(T, msg, topicCaptured); \
         }; \
-        msgSubscriber = handle->subscribe<T>(topic.c_str(), 10, func); \
+        unity_subscribers.push_back(handle->subscribe<T>(topic.c_str(), 1000, func)); \
         ROS_INFO("client subscribed %s with type %s", topic.c_str(), #T); \ 
         break; \
     }
@@ -131,25 +157,25 @@ void handle_unity_incoming_msg<void>(const std::string& topic, const uint8_t* pt
         {
             break;
         }
+        CUSTOM_MSG_SUB_HANDLER(WheelSpeed)
+        // case ((uint8_t)MessageTypeCode::WheelSpeed):
+        // {
+        //     subtest = handle->subscribe<WheelSpeed>("wheel_speed", 1000, handle_msg_test);
+        //     break;
+        // }
 
-        case (uint8_t)MessageTypeCode::WheelSpeed:
-        {
-            break;
-        }
+        //CUSTOM_MSG_SUB_HANDLER(WheelSpeed)
 
 #undef CUSTOM_MSG_SUB_HANDLER
 #undef UNMANAGED_SEND_TO_UNITY
     }
-    ros::Subscriber* heapSub = new ros::Subscriber;
-    *heapSub = std::move(msgSubscriber);
-    unity_subscribers.insert(heapSub);
 }
 
 void(*unity_incoming_msg_handlers[512])(const std::string& topic, const uint8_t* ptr) = {
     handle_unity_incoming_msg<ArmMotorCommand>, // 0
     nullptr, // 1
     handle_unity_incoming_msg<ProcessedControllerInput>, //2
-    nullptr, // 3
+    handle_unity_incoming_msg<WheelSpeed>, // 3
 };
 
 int main(int argc, char** argv)
@@ -161,7 +187,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nodeHandle;
     handle = &nodeHandle;
 
-    ros_to_unity_pub = handle->advertise<std_msgs::UInt8MultiArray>("ros_to_unity_topic", 10);
+    ros_to_unity_pub = handle->advertise<std_msgs::UInt8MultiArray>("ros_to_unity_topic", 1000);
 
     boost::function<void (const std_msgs::UInt8MultiArray&)> unityToRosSub = [&](const std_msgs::UInt8MultiArray& arr){
         const uint8_t* head = arr.data.data();
@@ -174,23 +200,30 @@ int main(int argc, char** argv)
         {
             head = (const uint8_t*)round_up<uint64_t, 8>((uint64_t)head);
         }
-        ROS_INFO("received msg %d %d %s", (int)*head, (int)type, topicName.c_str());
+        //ROS_INFO("received msg %d %d %s", (int)*head, (int)type, topicName.c_str());
         unity_incoming_msg_handlers[(size_t)type](topicName, head);
     };
 
-    ros::Subscriber sub = handle->subscribe<std_msgs::UInt8MultiArray>("unity_to_ros_topic", 10, unityToRosSub);
-
-    ros::Publisher testPub = handle->advertise<ArmMotorCommand>("test_topic", 10);
+    ros::Subscriber sub = handle->subscribe<std_msgs::UInt8MultiArray>("unity_to_ros_topic", 1000, unityToRosSub);
+    // ros::Subscriber sub2 = handle->subscribe<WheelSpeed>("wheel_speed", 1000, +[](WheelSpeed ws){
+    //     ROS_INFO("Called back test");
+    // });
+    //ros::Publisher pub2 = handle->advertise<WheelSpeed>("wheel_speed", 1000);
+    //ros::Publisher testPub = handle->advertise<ArmMotorCommand>("test_topic", 1000);
     while (ros::ok())
     {
-        ArmMotorCommand cmd;
-        cmd.MotorVel[0] = 10;
-        cmd.MotorVel[1] = 11;
-        cmd.MotorVel[2] = 12;
-        cmd.MotorVel[3] = 13;
-        cmd.MotorVel[4] = 14;
-        cmd.MotorVel[5] = 15;
-        testPub.publish<ArmMotorCommand>(cmd);
+        // WheelSpeed ws;
+        // handle_unity_incoming_msg<WheelSpeed>("wheel_speed", (uint8_t*)&ws);
+        // WheelSpeed ws;
+        // pub2.publish<WheelSpeed>(ws);
+        // ArmMotorCommand cmd;
+        // cmd.MotorVel[0] = 10;
+        // cmd.MotorVel[1] = 11;
+        // cmd.MotorVel[2] = 12;
+        // cmd.MotorVel[3] = 13;
+        // cmd.MotorVel[4] = 14;
+        // cmd.MotorVel[5] = 15;
+        // testPub.publish<ArmMotorCommand>(cmd);
         ros::spinOnce();
     }
 
