@@ -6,9 +6,11 @@
 #include <vector>
 #include <unordered_map>
 #include <std_msgs/UInt8MultiArray.h>
+#include "LidarData.h"
 
 using namespace ArmControl;
 using namespace DriveControl;
+using namespace lidar;
 
 ros::NodeHandle* handle;
 ros::Publisher ros_to_unity_pub;
@@ -86,6 +88,13 @@ void handle_unity_incoming_msg<WheelSpeed>(const std::string& topic, const uint8
     handle_unity_incoming_simple_unmanaged_msg(topic, (const WheelSpeed*)ptr);
 }
 
+template<>
+void handle_unity_incoming_msg<LidarData>(const std::string& topic, const uint8_t* ptr)
+{
+    ROS_INFO("LidarData received and published to %s", topic.c_str());
+    handle_unity_incoming_simple_unmanaged_msg(topic, (const LidarData*)ptr);
+}
+
 
 std::unordered_set<std::string> subscribed_topics;
 std::vector<ros::Subscriber> unity_subscribers;
@@ -153,10 +162,7 @@ void handle_unity_incoming_msg<void>(const std::string& topic, const uint8_t* pt
 
         CUSTOM_MSG_SUB_HANDLER(ArmMotorCommand)
         CUSTOM_MSG_SUB_HANDLER(ProcessedControllerInput)
-        case (uint8_t)MessageTypeCode::LidarData:
-        {
-            break;
-        }
+        CUSTOM_MSG_SUB_HANDLER(LidarData)
         CUSTOM_MSG_SUB_HANDLER(WheelSpeed)
         // case ((uint8_t)MessageTypeCode::WheelSpeed):
         // {
@@ -173,7 +179,7 @@ void handle_unity_incoming_msg<void>(const std::string& topic, const uint8_t* pt
 
 void(*unity_incoming_msg_handlers[512])(const std::string& topic, const uint8_t* ptr) = {
     handle_unity_incoming_msg<ArmMotorCommand>, // 0
-    nullptr, // 1
+    handle_unity_incoming_msg<LidarData>, // 1
     handle_unity_incoming_msg<ProcessedControllerInput>, //2
     handle_unity_incoming_msg<WheelSpeed>, // 3
 };
