@@ -6,7 +6,10 @@
 #include <vector>
 #include <unordered_map>
 #include <std_msgs/UInt8MultiArray.h>
+#include <sensor_msgs/PointCloud.h>
 #include "LidarData.h"
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_msgs/TFMessage.h>
 
 using namespace ArmControl;
 using namespace DriveControl;
@@ -184,6 +187,22 @@ void(*unity_incoming_msg_handlers[512])(const std::string& topic, const uint8_t*
     handle_unity_incoming_msg<WheelSpeed>, // 3
 };
 
+ros::Publisher pointCloudPub;
+
+void handle_depth_image_bytes(const std_msgs::UInt8MultiArray& arr)
+{
+    // ROS_INFO("Point Cloud Size: %d", arr.data.size());
+    sensor_msgs::PointCloud pc{};
+    pc.header.frame_id = "world";
+    std::vector<geometry_msgs::Point32> points;
+    points.resize(arr.data.size() / sizeof(float) / 3);
+    memcpy(points.data(), arr.data.data(), arr.data.size());
+
+    pc.points = std::move(points);
+    // pc.channels.resize(pc.points.size());
+    pointCloudPub.publish<sensor_msgs::PointCloud>(pc);
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "serialization_interface");
@@ -209,13 +228,24 @@ int main(int argc, char** argv)
         //ROS_INFO("received msg %d %d %s", (int)*head, (int)type, topicName.c_str());
         unity_incoming_msg_handlers[(size_t)type](topicName, head);
     };
-
+    // ros::Publisher tf2Pub = handle->advertise<tf2_msgs::TFMessage>("tf2", 10);
     ros::Subscriber sub = handle->subscribe<std_msgs::UInt8MultiArray>("unity_to_ros_topic", 1000, unityToRosSub);
+    pointCloudPub = handle->advertise<sensor_msgs::PointCloud>("depth_camera_point_cloud", 1000);
+
+    boost::function<void (const std_msgs::UInt8MultiArray&)> depthCamBytesHandler = [](const std_msgs::UInt8MultiArray& arr)
+    {
+        handle_depth_image_bytes(arr);
+    };
+    ros::Subscriber depthImageBytesSub = handle->subscribe<std_msgs::UInt8MultiArray>("depth_camera_point_cloud_bytes", 1000, depthCamBytesHandler);
     // ros::Subscriber sub2 = handle->subscribe<WheelSpeed>("wheel_speed", 1000, +[](WheelSpeed ws){
     //     ROS_INFO("Called back test");
     // });
     //ros::Publisher pub2 = handle->advertise<WheelSpeed>("wheel_speed", 1000);
     //ros::Publisher testPub = handle->advertise<ArmMotorCommand>("test_topic", 1000);
+
+    // tf2_ros::TransformBroadcaster broadcaster{};
+    
+
     while (ros::ok())
     {
         // WheelSpeed ws;
@@ -230,6 +260,14 @@ int main(int argc, char** argv)
         // cmd.MotorVel[4] = 14;
         // cmd.MotorVel[5] = 15;
         // testPub.publish<ArmMotorCommand>(cmd);
+        // broadcaster.sendTransform(geometry_msgs::TransformStamped());
+        // tf2_msgs::TFMessage tf2;
+        // geometry_msgs::TransformStamped transform;
+        // transform.child_frame_id = "map";
+        // transform.header.frame_id = "world";
+        // tf2.transforms.clear();
+        // tf2.transforms.push_back(transform);
+        // tf2Pub.publish<tf2_msgs::TFMessage>(tf2);
         ros::spinOnce();
     }
 
