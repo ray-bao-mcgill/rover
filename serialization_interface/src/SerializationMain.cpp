@@ -58,7 +58,7 @@ void handle_unity_incoming_simple_unmanaged_msg(const std::string& topic, const 
     {
         // new
         publishing_topics.insert(topic);
-        unity_publishers[topic] = handle->advertise<T>(topic.c_str(), 1000);
+        unity_publishers[topic] = handle->advertise<T>(topic.c_str(), 5);
     }
     //ROS_INFO("Published");
     unity_publishers[topic].publish<T>(*msg);
@@ -158,7 +158,7 @@ void handle_unity_incoming_msg<void>(const std::string& topic, const uint8_t* pt
             ROS_INFO("callback for unity subscription called"); \
             UNMANAGED_SEND_TO_UNITY(T, msg, topicCaptured); \
         }; \
-        unity_subscribers.push_back(handle->subscribe<T>(topic.c_str(), 1000, func)); \
+        unity_subscribers.push_back(handle->subscribe<T>(topic.c_str(), 3, func)); \
         ROS_INFO("client subscribed %s with type %s", topic.c_str(), #T); \ 
         break; \
     }
@@ -212,7 +212,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nodeHandle;
     handle = &nodeHandle;
 
-    ros_to_unity_pub = handle->advertise<std_msgs::UInt8MultiArray>("ros_to_unity_topic", 1000);
+    ros_to_unity_pub = handle->advertise<std_msgs::UInt8MultiArray>("ros_to_unity_topic", 3);
 
     boost::function<void (const std_msgs::UInt8MultiArray&)> unityToRosSub = [&](const std_msgs::UInt8MultiArray& arr){
         const uint8_t* head = arr.data.data();
@@ -229,14 +229,14 @@ int main(int argc, char** argv)
         unity_incoming_msg_handlers[(size_t)type](topicName, head);
     };
     // ros::Publisher tf2Pub = handle->advertise<tf2_msgs::TFMessage>("tf2", 10);
-    ros::Subscriber sub = handle->subscribe<std_msgs::UInt8MultiArray>("unity_to_ros_topic", 1000, unityToRosSub);
-    pointCloudPub = handle->advertise<sensor_msgs::PointCloud>("depth_camera_point_cloud", 1000);
+    ros::Subscriber sub = handle->subscribe<std_msgs::UInt8MultiArray>("unity_to_ros_topic", 3, unityToRosSub);
+    pointCloudPub = handle->advertise<sensor_msgs::PointCloud>("depth_camera_point_cloud", 3);
 
     boost::function<void (const std_msgs::UInt8MultiArray&)> depthCamBytesHandler = [](const std_msgs::UInt8MultiArray& arr)
     {
         handle_depth_image_bytes(arr);
     };
-    ros::Subscriber depthImageBytesSub = handle->subscribe<std_msgs::UInt8MultiArray>("depth_camera_point_cloud_bytes", 1000, depthCamBytesHandler);
+    ros::Subscriber depthImageBytesSub = handle->subscribe<std_msgs::UInt8MultiArray>("depth_camera_point_cloud_bytes", 3, depthCamBytesHandler);
     // ros::Subscriber sub2 = handle->subscribe<WheelSpeed>("wheel_speed", 1000, +[](WheelSpeed ws){
     //     ROS_INFO("Called back test");
     // });
