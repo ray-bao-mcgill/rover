@@ -171,7 +171,7 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(DEBUG_CONFIG "-fno-strict-aliasing;-Wall;-mavx2;-fsanitize=undefined;-fsanitize=null;-fsanitize=return")
-set(RELEASE_CONFIG "-O3;-fno-strict-aliasing;-Wall;-mavx2;-mfpmath=sse;-ftree-vectorizer-verbose=5")
+set(RELEASE_CONFIG "-O3;-fno-strict-aliasing;-Wall")
 
 
 add_executable(serialization_interface
