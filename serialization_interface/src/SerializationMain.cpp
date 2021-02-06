@@ -10,6 +10,7 @@
 #include "LidarData.h"
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_msgs/TFMessage.h>
+#include "boost/date_time/posix_time/posix_time.hpp"
 
 using namespace ArmControl;
 using namespace DriveControl;
@@ -191,6 +192,7 @@ ros::Publisher pointCloudPub;
 
 void handle_depth_image_bytes(const std_msgs::UInt8MultiArray& arr)
 {
+    boost::posix_time::ptime posixTimePrev = ros::Time::now().toBoost();
     // ROS_INFO("Point Cloud Size: %d", arr.data.size());
     sensor_msgs::PointCloud pc{};
     pc.header.frame_id = "world";
@@ -201,6 +203,11 @@ void handle_depth_image_bytes(const std_msgs::UInt8MultiArray& arr)
     pc.points = std::move(points);
     // pc.channels.resize(pc.points.size());
     pointCloudPub.publish<sensor_msgs::PointCloud>(pc);
+
+    boost::posix_time::ptime posixTime = ros::Time::now().toBoost();
+    std::string isoTimeStr = boost::posix_time::to_iso_extended_string(posixTime);
+    uint64_t pointCloudPubTime = (posixTime - posixTimePrev).total_nanoseconds();
+    ROS_INFO("Point cloud published at %s in %d ns", isoTimeStr.c_str(), pointCloudPubTime);
 }
 
 int main(int argc, char** argv)
