@@ -27,4 +27,8 @@
 ## Local obstacle/occupancy grid
 - The local height grid is then transformed into a local obstacle grid using the height_to_obstacle() function
 - height_to_obstacle() goes through all cells in the local height grid and compares their value to the adjacent cells. If the max height difference between a cell and one of its adjacent cells is more than the MAX_HEIGHT_DIFF parameter, the cell is determined to contain an obstacle.
--  
+- There may be more efficient ways to perform this step
+
+## Global grid
+- A global grid is initialized at the start of the script.
+- Every time a local obstacle grid is computed, its information is transferred into the global grid using local_to_global_grid()
