@@ -14,12 +14,15 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QRadioButton
 from PyQt5.QtWidgets import QHBoxLayout
 from PyQt5.QtWidgets import QWidget
+import std_msgs
 import window_manager
 import time
 from functools import partial
 import cv2
+import numpy as np
 import rospy as rp
 from sensor_msgs.msg._Image import Image
+from cv_bridge import CvBridge
 
 class AngleSelection(QWidget):
     """!@brief Widget offers a series of angles to chose from.
@@ -64,14 +67,18 @@ class SingleVideoScreen(QWidget):
         """
         super(SingleVideoScreen, self).__init__(parent)
 
+        self.counter = 1
+
+        self.current_image: QImage = None
+
         self._image_display = QLabel(self)
         self._image_display.setMinimumSize(400, 300)
-        self._topic_selector = QComboBox(self)
+        #self._topic_selector = QComboBox(self)
         self._angle_selector = AngleSelection(angle, self)
         self._angle = angle
 
         size_policy = QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
-        self._topic_selector.setSizePolicy(size_policy)
+        #self._topic_selector.setSizePolicy(size_policy)
         self._angle_selector.setSizePolicy(size_policy)
 
         hbox = QVBoxLayout()
@@ -81,34 +88,41 @@ class SingleVideoScreen(QWidget):
         self._button_row.setLayout(self._button_row_layout)
         self._cycle_forward = QPushButton(">>")
         self._cycle_backward = QPushButton("<<")
+        self._capture = QPushButton("Capture")
         self._button_row_layout.addWidget(self._cycle_backward)
         self._button_row_layout.addWidget(self._cycle_forward)
+        self._button_row_layout.addWidget(self._capture)
 
         hbox.addWidget(self._image_display)
-        hbox.addWidget(self._topic_selector)
+        #hbox.addWidget(self._topic_selector)
         hbox.addWidget(self._angle_selector)
         hbox.addWidget(self._button_row)
 
         self._cycle_forward.clicked.connect(self._cycle_video_stream_forward)
         self._cycle_backward.clicked.connect(self._cycle_video_stream_backward)
+        self._capture.clicked.connect(self._capture_image)
 
         self._angle_selector.turnAngle.connect(self.set_angle)
-        self._topic_selector.activated.connect(self._topic_sel_callback)
+        #self._topic_selector.activated.connect(self._topic_sel_callback)
         self._active_topic = ""
 
         self.setWindowTitle("Video Feeds")
 
         # subscribe to image stream
         self.cameraSub = rp.Subscriber("/webcam/image_raw", Image, partial(self.handle_image, self))
+        self.forwardPub = rp.Publisher("/cam_control/forward", std_msgs.msg.Int32, queue_size=1)
+        self.backwardPub = rp.Publisher("/cam_control/backward", std_msgs.msg.Int32, queue_size=1)
 
+        self.cv_bridge = CvBridge()
 
         # self.cam = cv2.VideoCapture(0)
 
+        self.cam_sub = rp.Subscriber("/cam_feed", Image, callback=partial(self._on_frame_received, self), queue_size=1)
+
         # class DefaultCameraFeedThread(QtCore.QThread):
-        #     def __init__(self, parent, cam, new_sample_fn):
+        #     def __init__(self, parent, new_sample_fn):
         #         super().__init__()
         #         self.parent = parent
-        #         self.cam = cam
         #         self.new_sample_fn = new_sample_fn
 
         #     def run(self):
@@ -119,14 +133,29 @@ class SingleVideoScreen(QWidget):
         #             qimage = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format_RGB888)
         #             self.new_sample_fn(qimage)
 
-        # self.cam_feed_thread = DefaultCameraFeedThread(self, self.cam, partial(self.new_sample))
+        # self.cam_feed_thread = DefaultCameraFeedThread(self, partial(self.new_sample))
         # self.cam_feed_thread.start()
 
+    def _capture_image(self):
+        if self.current_image is not None:
+            self.current_image.save(f"~/captures/image.png{self.counter}", "png")
+            self.counter += 1
+        else:
+            print("No image")
+
+    def _on_frame_received(self, _, image):
+        frame = self.cv_bridge.imgmsg_to_cv2(image)
+        #print(type(frame))
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        qimage = QImage(frame, frame.shape[1], frame.shape[0], QImage.Format_RGB888)
+        self.current_image = qimage
+        self.new_sample(qimage)
+
     def _cycle_video_stream_forward(self):
-        print("Forward")
+        self.forwardPub.publish(std_msgs.msg.Int32(0))
 
     def _cycle_video_stream_backward(self):
-        print("Backward")
+        self.backwardPub.publish(std_msgs.msg.Int32(0))
 
     def get_active_topic(self):
         """!@brief Get the currently selected topic
