@@ -3,7 +3,7 @@
 import pygame
 import time
 import rospy
-from custom_msgs.msg import Joystick_input
+from human_control_interface.msg import Joystick_input
 from arm_control.msg import ProcessedControllerInput
 
 class Node_Joystick():

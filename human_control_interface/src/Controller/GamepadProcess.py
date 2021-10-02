@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import rospy
 from human_control_interface.msg import Gamepad_input
 from geometry_msgs.msg import Twist
@@ -26,14 +28,14 @@ class Node_GamepadProcessing:
         self.maxAngularVelocity = 0
 
         # initialize a subscriber for grabbing data from gamepad
-        self.processSub = rospy.Subscriber("gamepad_data", Gamepad_input, gamepadProcessCall)
+        self.processSub = rospy.Subscriber("gamepad_data", Gamepad_input, self.gamepadProcessCall)
         self.processPub = rospy.Publisher("processGamepad_data", Twist, queue_size=1)
 
     def gamepadProcessCall(self, msg):
         # assign axis values
         self.xVal = msg.A2
         self.yVal = msg.A1
-        self.zVal = msg.A6
+        self.zVal = (msg.A6 + 1)/2
 
         # calc. for linear velocity
         self.roverLinearVelocity = self.wMax * self.rW * self.zVal * self.xVal
@@ -50,3 +52,4 @@ class Node_GamepadProcessing:
 
 if __name__ == "__main__":
     gamepadProcess = Node_GamepadProcessing(10, 10, 5)
+    rospy.spin()

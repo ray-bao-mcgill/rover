@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  geometry_msgs
   message_generation
 )
 
@@ -19,6 +20,7 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  geometry_msgs
 )
 
 catkin_package(
@@ -26,6 +28,7 @@ catkin_package(
   roscpp
   rospy 
   std_msgs
+  geometry_msgs
   message_runtime
   LIBRARIES human_control_interface
 )
@@ -33,6 +36,7 @@ catkin_package(
 catkin_install_python(PROGRAMS 
   src/Controller/Joystick.py
   src/Controller/Gamepad.py
+  src/Controller/GamepadProcess.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
