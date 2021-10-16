@@ -46,18 +46,18 @@ class Node_EmbeddedBridge():
 
         # Drive System
         self.drive_state_publisher      = rospy.Publisher("drive_state_data", DriveFeedback, queue_size=1)
-        self.drive_control_subscriber   = rospy.Subscriber("drive_control_data", WheelSpeed, writeDriveCommand)
+        self.drive_control_subscriber   = rospy.Subscriber("drive_control_data", WheelSpeed, self.writeDriveCommand)
         self.drive_state = WheelSpeed()
 
         # Arm System
         self.arm_state_publisher        = rospy.Publisher("arm_state_data", ArmStatusFeedback, queue_size=1)
-        self.arm_control_subscriber     = rospy.Subscriber("arm_control_data", ArmMotorCommand, writeArmCommand)
+        self.arm_control_subscriber     = rospy.Subscriber("arm_control_data", ArmMotorCommand, self.writeArmCommand)
         self.arm_state = ArmStatusFeedback()
 
         # Science System
         self.science_state_publisher    = rospy.Publisher("science_state_data", ScienceFeedback, queue_size=1)
         self.science_ccd_data_publisher = rospy.Publisher("science_ccd_data", CcdData)
-        self.science_control_subscriber = rospy.Subscriber("science_control_data", ScienceCmd, writeScienceCommand)
+        self.science_control_subscriber = rospy.Subscriber("science_control_data", ScienceCmd, self.writeScienceCommand)
 
         # Power System
         self.power_state_publisher      = rospy.Publisher("power_state_data", PowerFeedback, queue_size=1)
