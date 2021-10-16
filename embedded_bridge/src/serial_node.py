@@ -7,7 +7,7 @@ sys.path.append(currentdir)
 import serial_interface as serialInt 
 from std_msgs.msg import Int32
 from arm_control.msg import ArmMotorCommand, ArmStatusFeedback
-from DriveControl.msg import WheelSpeed
+from drive_control.msg import WheelSpeed
 from embedded_bridge.msg import DriveFeedback, PowerFeedback
 from science_module.msg import ScienceCmd, ScienceFeedback, CcdData
 import time
