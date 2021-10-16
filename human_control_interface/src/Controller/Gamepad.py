@@ -3,7 +3,7 @@
 import pygame
 import time
 import rospy
-from custom_msgs.msg import Gamepad_input
+from human_control_interface.msg import Gamepad_input
 from arm_control.msg import ProcessedControllerInput
 
 class Node_Gamepad():
