@@ -167,15 +167,16 @@ class Node_EmbeddedBridge():
                 if self.mapping[key] is not None:
                     msg = self.mapping[key].get_packet()
                     if msg is not None:
+                        print(msg)
                         sys_id, frame_id, frame_type, payload = msg
 
                         # Parse Incoming data based on Serial Communication Documentation
                         data = []
-                        if frame_id in [0, 1, 6]:
+                        if frame_type in ['0', '1', '6']:
                             data_str = payload.split(",")
                             data = [float(x) for x in data_str]
 
-                        elif frame_id == 2:
+                        elif frame_type == '2':
                             data_bits = ord(payload)
                             num_bits = 6
                             for i in range(0, num_bits):
@@ -183,14 +184,14 @@ class Node_EmbeddedBridge():
                                 data.insert(0, bit)
                                 data_bits = data_bits >> 1
                         
-                        elif frame_id == 3:
+                        elif frame_type == '3':
                             data_str = payload.split(",")
                             data = [int(data_str[0]), float(data_str[1])]
 
-                        elif frame_id == 4:
+                        elif frame_type == '4':
                             data.append(int(payload))
 
-                        elif frame_id == 5:
+                        elif frame_type == '5':
                             for i in range(0, len(payload), 2):
                                 Msb = ord(payload[i])
                                 Lsb = ord(payload[i+1])

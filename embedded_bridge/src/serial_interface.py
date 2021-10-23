@@ -65,10 +65,14 @@ class SerialInterface:
         # Establish threads
         self.send_stop.clear()
         self.send_thread = threading.Thread(target=self.send_manager, args=(self.send_stop,))
+        self.send_thread.setDaemon(True)
         self.send_thread.start()
+        
         self.receive_stop.clear()
         self.receive_thread = threading.Thread(target=self.receive_manager, args=(self.receive_stop,))
+        self.receive_thread.setDaemon(True)
         self.receive_thread.start()
+        
 
         # Clear buffers
         self.mcu.reset_input_buffer()
@@ -157,6 +161,7 @@ class SerialInterface:
         crc = 0
         for char in frame[4:-1]:            
             crc = compute_crc8ccitt(crc,ord(char))      #compute for entire payload
+        
         msg_crc = ord(frame[3])
         if(crc != msg_crc):
             raise ValueError            # Raise error if CRCs don't match
