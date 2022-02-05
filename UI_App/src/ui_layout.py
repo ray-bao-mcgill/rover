@@ -10,10 +10,39 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+import cv2
+
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+
 from drive_layout import Ui_DriveTab, Ui_DriveTab
 from arm_layout import Ui_Arm
 
+# Thread for running camera feeds
+class Thread(QThread):
+    # defines signal that will emit QImage object (after conversion from OpenCV array)
+    pixmapSignal = pyqtSignal(QImage)
+
+    def run(self):
+        cam = cv2.VideoCapture(0)
+        while True:
+            ret_val, cv_image = cam.read()
+            # if return value received, convert the image obtained from Numpy array to pixmap for Qt
+            # conversion code found here: https://github.com/docPhil99/opencvQtdemo/blob/master/staticLabel2.py
+            if ret_val:
+                rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+                h, w, ch = rgb_image.shape
+                bytes_per_line = ch * w
+                convert_to_Qt = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
+                p = convert_to_Qt.scaled(640, 480, Qt.KeepAspectRatio)
+                self.pixmapSignal.emit(p)
+
 class Ui_MainWindow(object):
+    @pyqtSlot(QImage) # defines a slot
+    def updateImage(self, img):
+        self.Camera.setPixmap(QPixmap.fromImage(img)) # edit camera label to display camera feed
+    
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(800, 600)
@@ -102,10 +131,17 @@ class Ui_MainWindow(object):
         self.camera_selector.setItemText(3, _translate("MainWindow", "Cam 4"))
         self.camera_selector.setItemText(4, _translate("MainWindow", "Cam 5"))
         self.camera_selector.setItemText(5, _translate("MainWindow", "Cam 6"))
-        self.Camera.setText(_translate("MainWindow", "Camera (add pixmap)"))
+        # self.Camera.setText(_translate("MainWindow", "Camera (add pixmap)"))
         self.label.setText(_translate("MainWindow", "Overall Feedback"))
         self.control_selector.setItemText(0, _translate("MainWindow", "Arm-Joint Control"))
         self.control_selector.setItemText(1, _translate("MainWindow", "Arm-Cartesian Control"))
         self.control_selector.setItemText(2, _translate("MainWindow", "Drive"))
         self.control_selector.setItemText(3, _translate("MainWindow", "Science"))
         self.control_selector.setItemText(4, _translate("MainWindow", "Autonomy"))
+    
+    def displayCamera(self):
+        # intialize thread + connect signal received from thread (video data) to update image function
+        newThread = Thread(self)
+        newThread.pixmapSignal.connect(self.updateImage)
+        newThread.start()
+

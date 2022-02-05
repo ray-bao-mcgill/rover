@@ -66,7 +66,7 @@ def main():
     window.arm_error_toggle(False)      # No errors in arm system at the start
     window.show()
 
-
+    window.displayCamera() # calls method to diplay camera
     app.exec()
 
 
