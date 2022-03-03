@@ -24,9 +24,12 @@ class Thread(QThread):
     # defines signal that will emit QImage object (after conversion from OpenCV array)
     pixmapSignal = pyqtSignal(QImage)
 
+    threadActive = True
+
     def run(self):
         cam = cv2.VideoCapture(0)
-        while True:
+
+        while self.threadActive:
             ret_val, cv_image = cam.read()
             # if return value received, convert the image obtained from Numpy array to pixmap for Qt
             # conversion code found here: https://github.com/docPhil99/opencvQtdemo/blob/master/staticLabel2.py
@@ -38,7 +41,16 @@ class Thread(QThread):
                 p = convert_to_Qt.scaled(640, 480, Qt.KeepAspectRatio)
                 self.pixmapSignal.emit(p)
 
+    @pyqtSlot()
+    def stop(self):
+        self.threadActive = False # sets flag as false to stop loop
+        self.terminate()
+
+    
+
 class Ui_MainWindow(object):
+    closeCam = pyqtSignal()
+
     @pyqtSlot(QImage) # defines a slot
     def updateImage(self, img):
         self.Camera.setPixmap(QPixmap.fromImage(img)) # edit camera label to display camera feed
@@ -143,5 +155,11 @@ class Ui_MainWindow(object):
         # intialize thread + connect signal received from thread (video data) to update image function
         newThread = Thread(self)
         newThread.pixmapSignal.connect(self.updateImage)
+        self.closeCam.connect(newThread.stop) # connect signal to stop method
         newThread.start()
+    
+    # calls super class' closeEvent method (window closed)
+    def closeEvent(self, event):
+        self.closeCam.emit() # emit signal to stop thread
+        
 
