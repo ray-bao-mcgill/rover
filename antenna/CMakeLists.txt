@@ -25,4 +25,7 @@ catkin_package(
 )
 
 catkin_install_python(PROGRAMS 
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+  src/camera_publisher_node.py
+  src/camera_subscriber_node.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

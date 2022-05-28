@@ -10,7 +10,7 @@ from sensor_msgs.msg import Image
 class Node_CameraFramePub():
 
     def __init__(self):
-        self.video_capture = cv2.VideoCapture(0, cv2.CAP_V4L2)
+        self.video_capture = cv2.VideoCapture(0)
         self.frames = None
 
         rospy.init_node('camera_frame_publisher')
@@ -19,7 +19,7 @@ class Node_CameraFramePub():
 
     def run(self):
         while self.video_capture is not None and self.video_capture.isOpened():
-            ret, frame = self.video_capture
+            ret, frame = self.video_capture.read()
             self.frames = self.openCV_to_ros_image(frame)
             if ret:
                 self.camera_frame_publisher.publish(self.frames)
