@@ -17,8 +17,9 @@ class Node_CameraFrameSub():
 
     def display_frames(self, frame):
         self.frames = self.ros_to_openCV_image(frame)
+        self.frames = cv2.imdecode(self.frames, 1)
         cv2.imshow("Live Feed", self.frames)
-        cv2.waitKey(40)
+        cv2.waitKey(10)  # Look into to reduce latency
 
     def ros_to_openCV_image(self, ros_image):
         bridge = CvBridge()
