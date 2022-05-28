@@ -17,7 +17,8 @@ class Node_CameraFrameSub():
 
     def display_frames(self, frame):
         self.frames = self.ros_to_openCV_image(frame)
-        cv2.imshow(self.frames)
+        cv2.imshow("Live Feed", self.frames)
+        cv2.waitKey(40)
 
     def ros_to_openCV_image(self, ros_image):
         bridge = CvBridge()
