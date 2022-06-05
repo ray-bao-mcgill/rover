@@ -152,8 +152,7 @@ class SerialInterface:
             byte_array += payload_size.to_bytes(1, 'big')
             byte_array += system_id.encode('ascii')
             for pixel in payload:
-                pass
-                # TODO byte_array += 2_bytes_to_bin(pixel)
+                byte_array += two_bytes_to_bin(pixel)
 
         if packet_id in ('0', '1', '2'):
             # Compute crc8ccitt
@@ -284,7 +283,7 @@ def decode_bytes(msg: str, prints=True):
     elif frame_type in '2':
         # 3691 int16(pixels)
         checksum = msg[2 + payload_len + 1]
-        pass
+        pass #TODO implement
 
     # Checksum validation
     if crc != checksum:
@@ -313,6 +312,15 @@ def int_to_bytes(n, length):  # Helper function
     return decode('%%0%dx' % (length << 1) % n, 'hex')[-length:]
 
 
+"""
+Converts 2 bytes pixel to binary
+"""
+def pixel_to_bin(value):
+    # TODO implement
+
+"""
+Converts float to bytes
+"""
 def float_to_bin(value):  # For testing.
     """ Convert float to 64-bit binary string. """
     # [d] = struct.unpack(">Q", struct.pack(">d", value))
