@@ -34,7 +34,7 @@ class SerialInterface:
     sync_id = 0
     connected = False
 
-    def __init__(self, port, baud_rate=9600, timeout=5, prints=True):
+    def __init__(self, port, baud_rate=115200, timeout=5, prints=True):
         # Port Information
         self.port = port
         self.baud_rate = baud_rate
@@ -470,37 +470,22 @@ if __name__ == "__main__":
 
         valid = False
 
-        """
-        while not valid:
-            s.send_bytes(frame_type, payload)
-            valid, packet, rest_of_msg = s.wait_for_answer(5)
-            print(packet)
-        """
-        time.sleep(2)
-
-        #s.send_bytes(frame_type, payload)
-        s.send_bytes(frame_type, [float(random.randint(0, 180))])
 
         time.sleep(3)
 
-        read = False
-        for i in range(3):
-            if s.serial.inWaiting() > 0:
-                read = True
-                valid, packet, rest_of_msg = s.read_bytes()
-                print(packet)
+        if s.serial.inWaiting() > 0:
+            read = True
+            valid, packet, rest_of_msg = s.read_bytes()
+            print(packet)
+            str_packet = [str(i) for i in packet]
+            formatted_msg = ' '.join(str_packet)
+            print(f"Message from arduino: {formatted_msg}")
+            while len(rest_of_msg) > 0 and valid is True:
+                valid, packet, rest_of_msg = decode_bytes(rest_of_msg)
                 str_packet = [str(i) for i in packet]
                 formatted_msg = ' '.join(str_packet)
                 print(f"Message from arduino: {formatted_msg}")
-                while len(rest_of_msg) > 0 and valid is True:
-                    valid, packet, rest_of_msg = decode_bytes(rest_of_msg)
-                    str_packet = [str(i) for i in packet]
-                    formatted_msg = ' '.join(str_packet)
-                    print(f"Message from arduino: {formatted_msg}")
-                s.serial.flush()
-                break
-            time.sleep(1)
 
-        if not read:
-            s.serial.flush()
-            print("Nothing read")
+
+        #s.send_bytes(frame_type, payload)
+        s.send_bytes(frame_type, [float(random.randint(0, 180))], '1')

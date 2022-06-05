@@ -44,8 +44,9 @@
 
 
 
-#define ob 13
-#define ID 'a'
+#define SERIAL_RX_BUFFER_SIZE 10
+#define ob LED_BUILTIN
+#define ID '1'
 
 #define PWM 9
 Servo serv;
@@ -53,15 +54,8 @@ Servo serv;
 float val = 0;
 int angle = 0;
 
-//Will make a lib for that
-typedef struct {
-    float b[SERIAL_RX_BUFFER_SIZE/sizeof(float)];
-    size_t count;
-} FloatBuffer;
-FloatBuffer fbuf;
 
-
-void AddFloatToBuffer(FloatBuffer fb, float val);
+//void AddFloatToBuffer(FloatBuffer fb, float val);
 void print_byte_array(byte* byte_array, size_t size);
 void char_to_float(char* str_byte, float* f);
 
@@ -70,49 +64,75 @@ uint8_t buffer[SERIAL_RX_BUFFER_SIZE];
 
 void setup() {
   pinMode(ob, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("YOOO");
   serv.attach(PWM);
-  SerialAPI::init(ID, 9600);
-  //Serial.begin(9600);
+  serv.write(angle);
+  //SerialAPI::init(ID, 9600);
+  Serial.println("heeyyy");
 }
 
 void loop() {
 
-  float f = 3.56;
-  uint8_t id = 1;
-  //uint8_t buffer[5];
-  //memcpy(buffer+1, &f, 4);
-  //buffer[0] = id;
-  //SerialAPI::send_bytes('1', buffer, 5);
+  //Send command request and wait for response
+  while(!SerialAPI::update()){
+    digitalWrite(ob, HIGH);
+    SerialAPI::send_request();
+    delay(10);
+    //digitalWrite(ob, LOW);
+    delay(10);
+  }
+
+  //Check message
+  int cur_pack_id = SerialAPI::read_data(buffer,sizeof(buffer));  
+
+  switch(cur_pack_id){
+    case '0':
+      //Check if master was actually talking to this system
+      if(buffer[0]==ID){
+        memcpy(&val, buffer+1, 4);
+        angle = (int) val;
+        serv.write(angle);
+      }
+
+    case '2':
+      int i =0;
+
+    case 'A':
+      int i =0;
+
+    case 'R':
+      memset(buffer,0,SERIAL_RX_BUFFER_SIZE);
+      val = (float) angle;
+      memcpy(buffer+1,&val,4);
+      SerialAPI::send_bytes('0', buffer, SERIAL_RX_BUFFER_SIZE);
+
+    default:
+      int i =0;
+  }
 
 
-delay(10);
 
-if(SerialAPI::update()){
-      digitalWrite(ob, HIGH);
 
-      memset(buffer, 0, SERIAL_RX_BUFFER_SIZE);
-      int cur_pack_id = SerialAPI::read_data(buffer,sizeof(buffer));
+  /*
+  if(SerialAPI::update()){
+        digitalWrite(ob, HIGH);
 
-      //const size_t payload_size = strlen(buffer); //DOESN'T WORK IF THERE ARE ZEROs BECAUSE IT'S CONSIDERED A NULL CHARACTER
+        memset(buffer, 0, SERIAL_RX_BUFFER_SIZE);
+        int cur_pack_id = SerialAPI::read_data(buffer,sizeof(buffer));
 
-      memcpy(&val, buffer+1, 4);
+        //const size_t payload_size = strlen(buffer); //DOESN'T WORK IF THERE ARE ZEROs BECAUSE IT'S CONSIDERED A NULL CHARACTER
 
-      angle = (int) val;
+        memcpy(&val, buffer+1, 4);
 
-      delay(100);
+        angle = (int) val;
 
-      //SerialAPI::send_bytes('1', buffer, payload_size);
-      if (SerialAPI::send_bytes('1', buffer, 5)) digitalWrite(ob, LOW);
-} 
-/*
-     delay(10);
-    for (int i = 0; i < 10;i++){
-      serv.write(i*10);
-      delay(1000);
-    }
-*/
-    delay(100);
-     serv.write(angle);
+        delay(100);
+
+        //SerialAPI::send_bytes('1', buffer, payload_size);
+        if (SerialAPI::send_bytes('1', buffer, 5)) digitalWrite(ob, LOW);
+  } 
+  */
 }
 
 
@@ -132,7 +152,7 @@ void serialEvent()
 
 
 
-
+/*
 //Will make a lib for that
 void AddFloatToBuffer(FloatBuffer fb,float val)
 {
@@ -145,15 +165,13 @@ void AddFloatToBuffer(FloatBuffer fb,float val)
 
 
 
-
-
 void decode_msg(char* buffer){
 
-}
 
 
 
-void sync(void){
+//Not used, just send or poll data.
+char sync(void){
   //Ask permission to write (SYN request)
   SerialAPI::send_bytes('S',"",0);
 
@@ -167,14 +185,25 @@ void sync(void){
 
   Serial.write(buffer);
 
+  if(buffer[1] == 'Y'){
+    return 'Y';
+  }
+  else if(buffer[1] == 'R'){
+    return 'R';
+  }
+  else{
+    return ' ';
+  }
+
+
   while(!(buffer[1] == 'Y')){
     memset(buffer,0,SERIAL_RX_BUFFER_SIZE);
 
     //Ask for a retransmit of wrong ID
-    SerialAPI::send_retransmit();
+    //SerialAPI::send_retransmit(); Deprecated
 
     //Wait for answer
-    while(!SerialAPI::update()) delay(1000);
+    while(!SerialAPI::update()) delay(10);
 
     //int tmp = Serial.available();
     //while(Serial.available()==tmp) delay(1000);
@@ -221,3 +250,5 @@ void char_to_float(char* str_byte, float* f){
 
   memcpy(f,array,4);
 }
+
+*/
