@@ -316,6 +316,7 @@ def int_to_bytes(n, length):  # Helper function
 Converts 2 bytes pixel to binary
 """
 def pixel_to_bin(value):
+    return
     # TODO implement
 
 """
@@ -326,7 +327,7 @@ def float_to_bin(value):  # For testing.
     # [d] = struct.unpack(">Q", struct.pack(">d", value))
     # return '{:064b}'.format(d)
     """ Convert float to 32-bit binary string. """
-    [f] = struct.unpack(">L", struct.pack(">f", value))
+    [f] = struct.unpack(">l", struct.pack(">f", value))
     return struct.pack("i", f)  # Pack the int as 4 bytes
     # return bin(f)
     # return '{:032b}'.format(f)
@@ -479,7 +480,7 @@ if __name__ == "__main__":
         valid = False
 
 
-        time.sleep(3)
+        time.sleep(15)
 
         if s.serial.inWaiting() > 0:
             read = True
@@ -496,4 +497,7 @@ if __name__ == "__main__":
 
 
         #s.send_bytes(frame_type, payload)
-        s.send_bytes(frame_type, [float(random.randint(0, 180))], '1')
+        s.send_bytes(frame_type, [float(random.randint(0, 100)),
+                                  float(random.randint(0, 100)),
+                                  float(random.randint(0, 100)),
+                                  float(random.randint(0, 100))], '1')
