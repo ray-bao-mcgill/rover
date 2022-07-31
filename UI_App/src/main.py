@@ -12,6 +12,7 @@ from drive_control.msg import WheelSpeed
 from geometry_msgs.msg import Twist
 from visualization_msgs.msg import MarkerArray
 from arm_control.msg import ArmStatusFeedback
+from std_msgs.msg import String
 
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
@@ -80,6 +81,7 @@ class UI(qtw.QMainWindow, Ui_MainWindow):
         # TODO: ML, CCD Camera, Microcamera
 
         # Rospy publisher
+        self.control_mode_selected_publisher = rospy.Publisher("control_mode_selected", String, queue_size=10)
         self.science_module_publisher = rospy.Publisher("science_controller_feedback", SciencePilot, queue_size=10)
         # TODO: KillSwitch Publisher
 
@@ -179,19 +181,19 @@ class UI(qtw.QMainWindow, Ui_MainWindow):
         '''
 
         if value == "Arm-Cartesian Control":
-            pass
+            self.control_mode_selected_publisher.publish("Arm-Cartesian Control")
             # return arm file
         elif value == "Arm-Joint Control":
-            pass
+            self.control_mode_selected_publisher.publish("Arm-Joint Control")
             # Return arm file
         elif value == "Science":
-            pass
+            self.control_mode_selected_publisher.publish("Science")
             # Return science file
         elif value == "Drive":
-            pass
+            self.control_mode_selected_publisher.publish("Drive")
             # Return drive file
         else:
-            pass
+            self.control_mode_selected_publisher.publish("Autonomy")
             # Return self for autonomy
 
 
